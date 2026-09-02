@@ -1,0 +1,9 @@
+node_modules/
+auth/*.json
+.env
+test-results/
+playwright-report/
+blob-report/
+reports/_probe.xlsx
+.probe/
+cases/manual-cases.json

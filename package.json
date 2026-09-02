@@ -1,0 +1,25 @@
+{
+  "name": "aperion-testcases",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Playwright codegen workspace: record manual test passes into automated specs.",
+  "scripts": {
+    "auth": "playwright codegen --save-storage=auth/auth.json https://dev.aperion.health/login",
+    "refresh": "node scripts/refresh-auth.js",
+    "record": "node scripts/refresh-auth.js && playwright codegen --load-storage=auth/auth.json https://dev.aperion.health",
+    "record:to": "node scripts/refresh-auth.js && playwright codegen --load-storage=auth/auth.json --output",
+    "test": "playwright test",
+    "test:headed": "playwright test --headed",
+    "report": "playwright show-report",
+    "trace": "playwright show-trace",
+    "excel": "playwright test",
+    "excel:template": "playwright test --list --reporter=./reporters/excel-reporter.js",
+    "import": "node scripts/import-sheet.js"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.50.0"
+  },
+  "dependencies": {
+    "exceljs": "^4.4.0"
+  }
+}
