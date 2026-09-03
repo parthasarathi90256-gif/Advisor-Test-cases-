@@ -23,11 +23,11 @@ test(...caseOf({
   steps: [
     'Pre-flight refresh tops up aperion_token via /api/v1/auth/refresh.',
     'Open the protected route (SMOKE_ROUTE, default /wellness/dashboard) with the saved storage state.',
-    'Check the landing URL and read aperion_token from localStorage.',
+    'Check the landing URL, the rendered content and aperion_token in localStorage.',
   ],
   data: 'auth/auth.json (localStorage: aperion_token, aperion_refresh_token)',
-  expected: 'The dashboard loads without redirecting to /login, and a non-empty '
-    + 'aperion_token is present in localStorage.',
+  expected: 'The dashboard loads without redirecting to /login, the logged-out marketing/OTP '
+    + 'screen is not shown, and a non-empty aperion_token is present in localStorage.',
 }), async ({ page }) => {
   await page.goto(ROUTE);
 
@@ -39,7 +39,14 @@ test(...caseOf({
   // redirects to /login on 401, so staying off /login means the session holds.
   await expect(page).not.toHaveURL(/\/login/);
 
-  // Second, independent signal: the app only keeps a token for a live session.
+  // On an expired session the app does NOT navigate to /login - it re-renders
+  // the logged-out marketing/OTP screen at the SAME url and leaves the stale
+  // token sitting in localStorage. So neither the URL check above nor a bare
+  // token-presence check catches it; assert the logged-out screen is absent too.
+  await expect(page.getByText('Send One-Time Passcode')).toHaveCount(0);
+  await expect(page.getByText('Your Health Journey Elevates Here')).toHaveCount(0);
+
+  // Third, independent signal: the app only keeps a token for a live session.
   const token = await page.evaluate(() => localStorage.getItem('aperion_token'));
   expect(token, 'aperion_token missing - session is not authenticated').toBeTruthy();
 });
