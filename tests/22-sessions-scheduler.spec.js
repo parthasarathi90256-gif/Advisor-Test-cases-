@@ -21,7 +21,7 @@ test.describe('Sessions', () => {
     expected: 'The Sessions heading is displayed together with the Previous, Today and Next '
       + 'controls and the Week / Month view switches.',
   }), async ({ page }) => {
-    await expect(page.getByRole('heading', { name: 'Sessions' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Sessions', exact: true })).toBeVisible();
     for (const b of ['Previous', 'Today', 'Next', 'Week', 'Month']) {
       await expect(page.getByRole('button', { name: b, exact: true })).toBeVisible();
     }
@@ -44,11 +44,11 @@ test.describe('Sessions', () => {
   }), async ({ page }) => {
     await page.getByRole('button', { name: 'Month', exact: true }).click();
     await page.waitForTimeout(1200);
-    await expect(page.getByRole('heading', { name: 'Sessions' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Sessions', exact: true })).toBeVisible();
 
     await page.getByRole('button', { name: 'Week', exact: true }).click();
     await page.waitForTimeout(1200);
-    await expect(page.getByRole('heading', { name: 'Sessions' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Sessions', exact: true })).toBeVisible();
   });
 
   test(...caseOf({
@@ -140,7 +140,11 @@ test.describe('Sessions — Scheduling (write path)', () => {
     await expect(dialog).toBeVisible();
 
     await dialog.getByRole('combobox', { name: 'Member *' }).click();
-    await page.getByRole('option', { name: MEMBER_NAME }).click();
+    // Two members share this display name in the dev data, so pick by the row's
+    // email rather than by name alone; fall back to the first match.
+    const byEmail = page.getByRole('option', { name: /Sadie Sink/ }).filter({ hasText: 'parthaaa06+emp_9' });
+    if (await byEmail.count()) await byEmail.first().click();
+    else await page.getByRole('option', { name: MEMBER_NAME }).first().click();
 
     await dialog.getByRole('combobox', { name: 'Session type *' }).click();
 

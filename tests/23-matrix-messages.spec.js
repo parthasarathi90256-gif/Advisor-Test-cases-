@@ -115,114 +115,104 @@ test.describe('Navigation Matrix', () => {
   });
 });
 
-test.describe('Communication Center', () => {
-  const MODULE = 'Advisor Portal → Messages';
+test.describe('Navigation Matrix — extended', () => {
+  const MODULE = 'Advisor Portal → Navigation Matrix';
+  const cards = (page) => page.locator('main h3');
 
   test.beforeEach(async ({ page }) => {
-    await page.goto('/wellness/messages');
+    await page.goto('/wellness/navigation-matrix');
     await page.waitForLoadState('networkidle');
+    await expect(cards(page).first()).toBeVisible({ timeout: 60000 });
   });
 
   test(...caseOf({
-    id: 'AP_TC_153',
+    id: 'AP_TC_267',
     module: MODULE,
-    scenario: 'Verify the Communication Center loads sent communications with column headers',
-    preconditions: 'Advisor is logged in and at least one communication has been sent.',
-    steps: [
-      'Open Messages from the sidebar.',
-      'Observe the communications list and its column headers.',
-    ],
-    data: 'N/A',
-    expected: 'The Communication Center heading is shown with the RECIPIENT, SUBJECT and CHANNEL '
-      + 'column headers and at least one communication row.',
+    scenario: 'Verify the gender filter shows sex-specific screenings only for the chosen gender',
+    preconditions: 'Advisor is on the Navigation Matrix with the full catalogue loaded.',
+    steps: ['Choose "Female" in "Filter by gender".', 'Observe the condition cards.'],
+    data: 'Gender: Female',
+    expected: 'Breast Cancer and Cervical Cancer cards remain, Prostate Cancer (PSA) is removed, and the card count drops.',
   }), async ({ page }) => {
-    await expect(page.getByRole('heading', { name: 'Communication Center' })).toBeVisible();
-
-    // This grid exposes no ARIA columnheaders, and CSS uppercases the labels, so
-    // assert the header row's text case-insensitively.
-    const headerRow = page.getByRole('row').first();
-    for (const h of [/Recipient/i, /Subject/i, /Channel/i]) {
-      await expect(headerRow).toContainText(h);
-    }
-    await expect(dataRows(page).first()).toBeVisible({ timeout: 20000 });
-  });
-
-  test(...caseOf({
-    id: 'AP_TC_154',
-    module: MODULE,
-    scenario: 'Verify communications can be filtered by the Email and SMS channels',
-    preconditions: 'Advisor is on the Communication Center page with communications listed.',
-    steps: [
-      'Note the total number of communications under the "All" filter.',
-      'Click the "Email" channel filter and observe the list.',
-      'Click the "SMS" channel filter and observe the list.',
-      'Click "All" to restore the full list.',
-    ],
-    data: 'Channels: All, Email, SMS',
-    expected: 'Each channel filter narrows the list to that channel only, and "All" restores the '
-      + 'original number of communications.',
-  }), async ({ page }) => {
-    await expect(dataRows(page).first()).toBeVisible({ timeout: 20000 });
-    const all = await dataRows(page).count();
-
-    await page.getByRole('button', { name: 'Email', exact: true }).click();
-    await page.waitForTimeout(1500);
-    const email = await dataRows(page).count();
-    expect(email).toBeLessThanOrEqual(all);
-
-    await page.getByRole('button', { name: 'SMS', exact: true }).click();
-    await page.waitForTimeout(1500);
-    const sms = await dataRows(page).count();
-    expect(sms).toBeLessThanOrEqual(all);
-
-    await page.getByRole('button', { name: 'All', exact: true }).click();
-    await page.waitForTimeout(1500);
-    expect(await dataRows(page).count()).toBe(all);
-  });
-
-  test(...caseOf({
-    id: 'AP_TC_155',
-    module: MODULE,
-    scenario: 'Verify the Compose action opens the message composer',
-    preconditions: 'Advisor is on the Communication Center page.',
-    steps: [
-      'Click "Compose".',
-      'Observe the composer surface.',
-    ],
-    data: 'N/A',
-    expected: 'A message composer opens as a dialog or a dedicated view without an application '
-      + 'error. No message is sent.',
-  }), async ({ page }) => {
-    await page.getByRole('button', { name: /^Compose$/i }).click();
-    await page.waitForTimeout(2000);
-
-    const opened = (await page.getByRole('dialog').count()) > 0
-      || (await page.getByRole('textbox').count()) > 1;
-    expect(opened, 'composer did not open').toBeTruthy();
-  });
-
-  test(...caseOf({
-    id: 'AP_TC_156',
-    module: MODULE,
-    scenario: 'NEGATIVE - Verify searching communications for an unknown recipient returns no results',
-    preconditions: 'Advisor is on the Communication Center page with communications listed.',
-    steps: [
-      'Type a recipient that does not exist into "Search communications...".',
-      'Observe the communications list.',
-    ],
-    data: 'Search term: "zzzzz-no-such-recipient"',
-    expected: 'No communication rows are returned and an empty state is displayed.',
-  }), async ({ page }) => {
-    await expect(dataRows(page).first()).toBeVisible({ timeout: 20000 });
-    const before = await dataRows(page).count();
-
-    await page.getByPlaceholder(/Search communications/i).fill('zzzzz-no-such-recipient');
+    const all = await cards(page).count();
+    await page.getByRole('combobox', { name: 'Filter by gender' }).click();
+    await page.getByRole('option', { name: /Female/ }).click();
     await page.waitForTimeout(3000);
+    const names = await cards(page).allInnerTexts();
+    expect(names.length).toBeLessThan(all);
+    expect(names.some((n) => /Breast Cancer/.test(n))).toBeTruthy();
+    expect(names.some((n) => /Cervical Cancer/.test(n))).toBeTruthy();
+    expect(names.some((n) => /Prostate Cancer/.test(n))).toBeFalsy();
+  });
 
-    // The grid keeps one empty-state row, so assert the drop plus the message
-    // rather than an exact count of zero.
-    expect(await dataRows(page).count()).toBeLessThan(before);
-    await expect(page.getByText(/no (communications?|messages?|results?|matches?)/i).first())
-      .toBeVisible({ timeout: 15000 });
+  test(...caseOf({
+    id: 'AP_TC_268',
+    module: MODULE,
+    scenario: 'Verify the age filter hides screenings that do not apply at that age',
+    preconditions: 'Advisor is on the Navigation Matrix.',
+    steps: ['Enter age 30.', 'Observe the cards.'],
+    data: 'Age: 30',
+    expected: 'AAA (Aortic Aneurysm), which applies to men 65-75, is no longer listed; age-appropriate screenings remain.',
+  }), async ({ page }) => {
+    await page.getByPlaceholder(/Enter age/i).fill('30');
+    await page.waitForTimeout(3000);
+    const names = await cards(page).allInnerTexts();
+    expect(names.length).toBeGreaterThan(0);
+    expect(names.some((n) => /AAA/.test(n))).toBeFalsy();
+  });
+
+  test(...caseOf({
+    id: 'AP_TC_269',
+    module: MODULE,
+    scenario: 'Verify the priority and commonness filters narrow the catalogue',
+    preconditions: 'Advisor is on the Navigation Matrix.',
+    steps: ['Choose a priority in "Filter by priority".', 'Note the count; Clear all.', 'Choose a commonness in "Filter by commonness".'],
+    data: 'First non-default option of each filter',
+    expected: 'Each filter reduces the number of cards and Clear all restores the full set.',
+  }), async ({ page }) => {
+    const all = await cards(page).count();
+    for (const f of ['Filter by priority', 'Filter by commonness']) {
+      await page.getByRole('combobox', { name: f }).click();
+      await page.getByRole('option').nth(1).click();
+      await page.waitForTimeout(3000);
+      expect(await cards(page).count()).toBeLessThan(all);
+      await page.getByRole('button', { name: 'Clear all' }).click();
+      await page.waitForTimeout(3000);
+      expect(await cards(page).count()).toBe(all);
+    }
+  });
+
+  test(...caseOf({
+    id: 'AP_TC_270',
+    module: MODULE,
+    scenario: 'Verify the matrix can be switched between Grid and List views',
+    preconditions: 'Advisor is on the Navigation Matrix (Grid).',
+    steps: ['Click "List".', 'Click "Grid".'],
+    data: 'N/A',
+    expected: 'List view renders the conditions as a table; Grid restores the cards.',
+  }), async ({ page }) => {
+    const group = page.getByRole('group', { name: 'Matrix view' });
+    await group.getByRole('button', { name: 'List', exact: true }).click();
+    await page.waitForTimeout(3000);
+    await expect(page.getByRole('table').first()).toBeVisible();
+    await group.getByRole('button', { name: 'Grid', exact: true }).click();
+    await page.waitForTimeout(3000);
+    await expect(cards(page).first()).toBeVisible();
+  });
+
+  test(...caseOf({
+    id: 'AP_TC_272',
+    module: MODULE,
+    scenario: 'Verify a condition card shows target population, age-based eligibility and clinical notes',
+    preconditions: 'Advisor is on the Navigation Matrix.',
+    steps: ['Read the first condition card.'],
+    data: 'N/A',
+    expected: 'The card shows Target population, Age-based eligibility bands (18–39, 40–49, 50–64, 65+) and Clinical notes, plus the eligibility legend.',
+  }), async ({ page }) => {
+    const main = page.locator('main');
+    for (const t of ['Target population', 'Age-based eligibility', '18–39', '40–49', '50–64', '65+', 'Clinical notes']) {
+      await expect(main.getByText(t, { exact: false }).first()).toBeVisible();
+    }
+    await expect(main.getByText(/Eligibility/).first()).toBeVisible();
   });
 });

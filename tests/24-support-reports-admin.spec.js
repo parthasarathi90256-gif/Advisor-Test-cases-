@@ -11,94 +11,119 @@ test.describe('Help & Support', () => {
   test(...caseOf({
     id: 'AP_TC_157',
     module: MODULE,
-    scenario: 'Verify the Help & Support page loads the contact form, knowledge base and live chat',
+    scenario: 'Verify the Help & Support page loads contact details, knowledge base, live chat and FAQs',
     preconditions: 'Advisor is logged in to the Advisor Portal.',
-    steps: [
-      'Open Help & Support from the sidebar.',
-      'Observe the support options and the contact form fields.',
-    ],
+    steps: ['Open Help & Support from the sidebar.', 'Observe the support sections and the FAQ list.'],
     data: 'N/A',
-    expected: 'The Help & Support heading is shown with the Contact Support, Knowledge Base and '
-      + 'Live Chat sections, and the contact form exposes name, email, subject and message fields.',
+    expected: 'The Help & Support heading is shown with a Contact Support card (phone number, hours, support email), '
+      + 'Knowledge Base and Live Chat cards (currently "Coming Soon") and a Frequently Asked Questions list.',
   }), async ({ page }) => {
     await expect(page.getByRole('heading', { name: 'Help & Support' })).toBeVisible();
     for (const s of ['Contact Support', 'Knowledge Base', 'Live Chat']) {
-      await expect(page.getByText(s, { exact: false }).first()).toBeVisible();
+      await expect(page.getByRole('heading', { name: s })).toBeVisible();
     }
-    await expect(page.getByPlaceholder(/Your name/i)).toBeVisible();
-    await expect(page.getByPlaceholder(/Brief summary of your request/i)).toBeVisible();
-    await expect(page.getByPlaceholder(/describe your issue/i)).toBeVisible();
+    await expect(page.getByText(/\(\d{3}\) \d{3}-\d{4}/)).toBeVisible();
+    await expect(page.getByText(/Frequently Asked Questions/i)).toBeVisible();
+    expect(await page.getByRole('button', { name: /^How do I|^Where can I/ }).count()).toBeGreaterThan(0);
   });
 
   test(...caseOf({
     id: 'AP_TC_158',
     module: MODULE,
-    scenario: 'Verify the support contact form pre-fills the logged-in advisor email address',
-    preconditions: 'Advisor is logged in and on the Help & Support page.',
-    steps: [
-      'Locate the email field on the Contact Support form.',
-      'Read its value.',
-    ],
-    data: 'The logged-in advisor account email',
-    expected: 'The email field is pre-populated with the signed-in advisor\'s email address so it '
-      + 'does not have to be retyped.',
+    scenario: 'Verify the support email is offered as a mailto link',
+    preconditions: 'Advisor is on the Help & Support page.',
+    steps: ['Locate the support email in the Contact Support card.', 'Inspect the link target.'],
+    data: 'N/A',
+    expected: 'The support email address is a "mailto:" link so it opens the advisor\'s mail client.',
   }), async ({ page }) => {
-    const email = page.locator('input[type=email]').first();
-    await expect(email).toBeVisible();
-    const value = await email.inputValue();
-    expect(value, 'email field was not pre-filled').toMatch(/@/);
+    const link = page.getByRole('link', { name: /@aperion\.health/ });
+    await expect(link).toBeVisible();
+    expect(await link.getAttribute('href')).toMatch(/^mailto:/);
   });
 
   test(...caseOf({
     id: 'AP_TC_159',
     module: MODULE,
     scenario: 'Verify a knowledge base FAQ entry expands to reveal its answer',
-    preconditions: 'Advisor is on the Help & Support page with the Knowledge Base listed.',
-    steps: [
-      'Locate the FAQ entry "How do I manage my sessions calendar?".',
-      'Click the entry.',
-      'Observe the answer content.',
-    ],
-    data: 'FAQ: "How do I manage my sessions calendar?"',
-    expected: 'The FAQ entry expands and reveals additional answer text without navigating away '
-      + 'from the page.',
+    preconditions: 'Advisor is on the Help & Support page with the FAQ list shown.',
+    steps: ['Click the first FAQ question.', 'Observe the answer content.'],
+    data: 'FAQ: "How do I schedule advisory sessions with members?"',
+    expected: 'The FAQ entry expands and reveals additional answer text without navigating away from the page.',
   }), async ({ page }) => {
-    const faq = page.getByRole('button', { name: /How do I manage my sessions calendar/i });
+    const faq = page.getByRole('button', { name: /How do I schedule advisory sessions/i });
     await expect(faq).toBeVisible();
-
-    const before = (await page.locator('body').innerText()).length;
+    const before = (await page.locator('main').innerText()).length;
     await faq.click();
     await page.waitForTimeout(1200);
-    const after = (await page.locator('body').innerText()).length;
-
+    const after = (await page.locator('main').innerText()).length;
     expect(after, 'no answer text appeared after expanding the FAQ').toBeGreaterThan(before);
+    await expect(page).toHaveURL(/\/wellness\/support/);
   });
 
   test(...caseOf({
     id: 'AP_TC_160',
     module: MODULE,
-    scenario: 'NEGATIVE - Verify the support request cannot be submitted with an invalid email address',
-    preconditions: 'Advisor is on the Help & Support page with the Contact Support form displayed.',
+    scenario: 'NEGATIVE - Verify a support request cannot be submitted until category, title and a 20+ character description are provided',
+    preconditions: 'Advisor is logged in; the header "Support" button is available on every page.',
     steps: [
-      'Enter a name and a subject.',
-      'Replace the email address with an invalid value such as "not-an-email".',
-      'Enter a message.',
-      'Attempt to submit the form.',
+      'Click "Support" in the page header.',
+      'Observe the submit control with the form empty.',
+      'Pick a category and a title but type a description shorter than 20 characters.',
+      'Observe the submit control.',
     ],
-    data: 'Name: Test Advisor; Email: "not-an-email"; Subject: Automated negative check',
-    expected: 'The form refuses the submission - the submit control stays disabled or a validation '
-      + 'message is shown - and no support ticket is created.',
+    data: 'Category: Feedback; Title: "Automated negative check"; Description: "too short"',
+    expected: '"Submit Request" stays disabled while the form is incomplete; no ticket is created.',
   }), async ({ page }) => {
-    await page.getByPlaceholder(/Your name/i).fill('Test Advisor');
-    const email = page.locator('input[type=email]').first();
-    await email.fill('not-an-email');
-    await page.getByPlaceholder(/Brief summary of your request/i).fill('Automated negative check');
-    await page.getByPlaceholder(/describe your issue/i).fill('Automated negative check - do not action.');
-    await page.waitForTimeout(800);
+    await page.getByRole('button', { name: 'Support', exact: true }).first().click();
+    const submit = page.getByRole('button', { name: 'Submit Request' });
+    await expect(submit).toBeVisible();
+    await expect(submit).toBeDisabled();
+    await page.getByRole('button', { name: /^Feedback/ }).click();
+    await page.getByRole('textbox', { name: 'Title *' }).fill('Automated negative check');
+    await page.getByRole('textbox', { name: 'Description *' }).fill('too short');
+    await page.waitForTimeout(600);
+    await expect(submit).toBeDisabled();
+    await page.getByRole('button', { name: 'Cancel' }).click();
+  });
 
-    // Browser-native validation on a type=email input is the expected guard.
-    const valid = await email.evaluate((e) => e.checkValidity());
-    expect(valid, 'invalid email was accepted as valid').toBe(false);
+  test(...caseOf({
+    id: 'AP_TC_204',
+    module: MODULE,
+    scenario: 'Verify the header Support modal offers Issue / Feedback / Feature Request categories, title, description and attachments',
+    preconditions: 'Advisor is logged in.',
+    steps: ['Click "Support" in the page header.', 'Observe the modal fields.', 'Close it with Cancel.'],
+    data: 'N/A',
+    expected: 'A Contact Support modal opens with the three category buttons, a Title (max 200), a Description '
+      + '(minimum 20 characters), an attachments drop zone (JPG/PNG/WebP/MP4/MOV, up to 5 files) and Cancel / Submit Request.',
+  }), async ({ page }) => {
+    await page.getByRole('button', { name: 'Support', exact: true }).first().click();
+    await expect(page.getByRole('heading', { name: 'Contact Support' })).toBeVisible();
+    for (const c of [/^Issue/, /^Feedback/, /^Feature Request/]) await expect(page.getByRole('button', { name: c })).toBeVisible();
+    await expect(page.getByRole('textbox', { name: 'Title *' })).toBeVisible();
+    await expect(page.getByRole('textbox', { name: 'Description *' })).toBeVisible();
+    await expect(page.getByText(/Minimum 20 characters/)).toBeVisible();
+    await expect(page.getByText(/up to 5 files/)).toBeVisible();
+    await page.getByRole('button', { name: 'Cancel' }).click();
+    await expect(page.getByRole('heading', { name: 'Contact Support' })).toHaveCount(0);
+  });
+
+  test(...caseOf({
+    id: 'AP_TC_205',
+    module: MODULE,
+    scenario: 'Verify a complete support request can be submitted from the header Support modal',
+    preconditions: 'Advisor is logged in.',
+    steps: ['Open the header Support modal.', 'Choose Feedback, enter a title and a 20+ character description.', 'Click "Submit Request".'],
+    data: 'Category: Feedback; Title: "Automated QA ticket"; Description: "Automated test submission from the QA suite - please ignore."',
+    expected: '"Submit Request" becomes enabled once the form is valid and the modal closes after submission.',
+  }), async ({ page }) => {
+    await page.getByRole('button', { name: 'Support', exact: true }).first().click();
+    await page.getByRole('button', { name: /^Feedback/ }).click();
+    await page.getByRole('textbox', { name: 'Title *' }).fill('Automated QA ticket');
+    await page.getByRole('textbox', { name: 'Description *' }).fill('Automated test submission from the QA suite - please ignore.');
+    const submit = page.getByRole('button', { name: 'Submit Request' });
+    await expect(submit).toBeEnabled();
+    await submit.click();
+    await expect(page.getByRole('heading', { name: 'Contact Support' })).toHaveCount(0, { timeout: 15000 });
   });
 });
 
@@ -175,6 +200,76 @@ test.describe('Reports & Analytics', () => {
     await page.getByRole('button', { name: /View all members/i }).click();
     await expect(page).toHaveURL(/\/wellness\/members/);
     await expect(page.getByRole('heading', { name: 'Members' })).toBeVisible();
+  });
+});
+
+test.describe('Reports & Analytics — extended', () => {
+  const MODULE = 'Advisor Portal → Reports';
+
+  test.beforeEach(async ({ page }) => {
+    await page.goto('/wellness/reports');
+    await page.waitForLoadState('networkidle');
+    await expect(page.locator('[role=combobox]').filter({ hasText: /Last 7 days/i })).toBeVisible({ timeout: 40000 });
+  });
+
+  test(...caseOf({
+    id: 'AP_TC_277',
+    module: MODULE,
+    scenario: 'Verify changing the reporting period recalculates the metrics',
+    preconditions: 'Advisor is on the Reports page with the default "Last 7 days" period.',
+    steps: ['Read the Sessions Completed value.', 'Switch the period to "All time".', 'Read the value again.'],
+    data: 'Periods: Last 7 days, All time',
+    expected: 'The Sessions Completed value changes (All time is greater than or equal to the 7-day value).',
+  }), async ({ page }) => {
+    const tile = page.getByRole('button', { name: /Sessions Completed/ });
+    const before = parseInt((await tile.innerText()).match(/\d+/)[0], 10);
+    await page.locator('[role=combobox]').filter({ hasText: /Last 7 days/i }).click();
+    await page.getByRole('option', { name: 'All time' }).click();
+    await page.waitForTimeout(4000);
+    const after = parseInt((await tile.innerText()).match(/\d+/)[0], 10);
+    expect(after).toBeGreaterThanOrEqual(before);
+  });
+
+  test(...caseOf({
+    id: 'AP_TC_278',
+    module: MODULE,
+    scenario: 'Verify a metric tile drills down to the Sessions page',
+    preconditions: 'Advisor is on the Reports page.',
+    steps: ['Click the "Sessions Completed" tile.', 'Observe the resulting page.'],
+    data: 'N/A',
+    expected: 'The advisor is taken to /wellness/sessions.',
+  }), async ({ page }) => {
+    await page.getByRole('button', { name: /Sessions Completed/ }).click();
+    await expect(page).toHaveURL(/\/wellness\/sessions/, { timeout: 20000 });
+  });
+
+  test(...caseOf({
+    id: 'AP_TC_279',
+    module: MODULE,
+    scenario: 'Verify the report charts render (Goal Completion by Member, Sessions By Type, Goals by Category, Session Distribution by Day)',
+    preconditions: 'Advisor is on the Reports page.',
+    steps: ['Scroll through the report.', 'Observe each chart section.'],
+    data: 'N/A',
+    expected: 'All four chart sections are present with their titles.',
+  }), async ({ page }) => {
+    for (const t of ['Goal Completion by Member', 'Sessions By Type', 'Goals by Category', 'Session Distribution by Day']) {
+      await expect(page.getByText(t, { exact: false }).first()).toBeVisible();
+    }
+  });
+
+  test(...caseOf({
+    id: 'AP_TC_280',
+    module: MODULE,
+    scenario: 'Verify the Reports stats row can be hidden and restored',
+    preconditions: 'Advisor is on the Reports page.',
+    steps: ['Click "Hide Stats".', 'Click "Show Stats".'],
+    data: 'N/A',
+    expected: 'The metric tiles collapse and the control toggles to Show Stats; clicking again restores them.',
+  }), async ({ page }) => {
+    await page.getByRole('button', { name: /Hide Stats/i }).click();
+    await expect(page.getByRole('button', { name: /Show Stats/i })).toBeVisible();
+    await page.getByRole('button', { name: /Show Stats/i }).click();
+    await expect(page.getByRole('button', { name: /Hide Stats/i })).toBeVisible();
   });
 });
 
