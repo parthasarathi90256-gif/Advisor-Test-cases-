@@ -10,7 +10,26 @@
  *   test(...caseOf({ id: 'TC-MEM-001', ... }), async ({ page }) => { ... });
  *   test.skip(...caseOf({ ... }), async ({ page }) => { ... });   // parks a case
  */
-const { test, expect } = require('@playwright/test');
+const base = require('@playwright/test');
+const { refreshAuth, accessTokenSecondsLeft } = require('../scripts/refresh-auth');
+
+// The access token in auth.json only lives 15 min and a cold page load validates
+// nothing else, so a suite that runs longer than that starts landing on /login
+// part-way through. global-setup refreshes once; this tops it up again before any
+// test whose saved token is close to expiry. Specs that opt out of the saved
+// session (test.use({ storageState: { cookies: [], origins: [] } })) pass straight through.
+const REFRESH_WHEN_UNDER_SECONDS = 4 * 60;
+
+const test = base.test.extend({
+  storageState: async ({ storageState }, use) => {
+    if (typeof storageState === 'string' && process.env.APERION_NO_AUTO_REFRESH !== '1') {
+      const left = accessTokenSecondsLeft();
+      if (left !== null && left < REFRESH_WHEN_UNDER_SECONDS) await refreshAuth({ quiet: true });
+    }
+    await use(storageState);
+  },
+});
+const { expect } = base;
 
 // These are the sheet's columns. `id` and `scenario` come from the test title;
 // `actual` and `status` come from the run. Anything else is not in the document.

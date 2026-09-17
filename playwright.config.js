@@ -15,6 +15,10 @@ module.exports = defineConfig({
   workers: 1,
   fullyParallel: false,
   retries: 0,
+  // The portal is a dev build that hydrates slowly (10-45 s per page on a busy
+  // machine) and the clinical-workflow cases drive 4-6 screens each.
+  timeout: 180000,
+  expect: { timeout: 15000 },
   // All three on every run: console, browsable HTML, and the Excel test case doc.
   // Keep these in the config rather than passing --reporter on the CLI - a CLI
   // --reporter REPLACES this list, which silently stops the HTML report updating.
@@ -34,8 +38,8 @@ module.exports = defineConfig({
     trace: 'retain-on-failure',
     screenshot: 'only-on-failure',
     video: 'retain-on-failure',
-    actionTimeout: 15000,
-    navigationTimeout: 30000,
+    actionTimeout: 30000,
+    navigationTimeout: 90000,
   },
 
   projects: [

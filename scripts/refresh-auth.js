@@ -19,6 +19,23 @@ const REFRESH_KEY = 'aperion_refresh_token';
 
 const STATUS = { OK: 'ok', SKIPPED: 'skipped', STALE: 'stale', MISSING: 'missing' };
 
+/**
+ * Seconds until the saved access token expires (negative = already expired),
+ * or null when there is no readable token. Reads the JWT `exp` claim only.
+ */
+function accessTokenSecondsLeft() {
+  try {
+    const state = JSON.parse(fs.readFileSync(AUTH_FILE, 'utf8'));
+    for (const o of state.origins || []) {
+      const slot = (o.localStorage || []).find((i) => i.name === ACCESS_KEY && i.value);
+      if (!slot) continue;
+      const payload = JSON.parse(Buffer.from(slot.value.split('.')[1], 'base64url').toString());
+      if (payload.exp) return payload.exp - Math.floor(Date.now() / 1000);
+    }
+  } catch { /* unreadable - treat as unknown */ }
+  return null;
+}
+
 function log(quiet, msg) {
   if (!quiet) console.log(msg);
 }
@@ -90,7 +107,7 @@ async function refreshAuth({ quiet = false } = {}) {
   return STATUS.OK;
 }
 
-module.exports = { refreshAuth, STATUS };
+module.exports = { refreshAuth, accessTokenSecondsLeft, STATUS };
 
 if (require.main === module) {
   refreshAuth().then((status) => {

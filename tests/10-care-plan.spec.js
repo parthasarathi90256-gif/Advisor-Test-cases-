@@ -8,7 +8,7 @@ const { test, expect, caseOf } = require('../support/testcase');
  * `test`. Locators below are placeholders and will not match the real portal.
  */
 test.skip(...caseOf({
-  id: 'AP_TC_132',
+  id: 'TC-TEMPLATE-001',
   module: 'Care Plan',
   scenario: 'Member can open and read their active care plan',
   preconditions: 'Logged in as a member who has at least one active care plan.',

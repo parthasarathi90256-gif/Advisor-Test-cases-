@@ -131,6 +131,9 @@ class ExcelReporter {
         status: result ? (STATUS_OF[result.status] || 'Not Executed') : 'Not Executed',
         automated: true,
       };
+      if (id && automated.has(id)) {
+        console.warn(`  WARNING: duplicate test case ID ${id} - "${automated.get(id).scenario}" is being replaced by "${scenario}"`);
+      }
       if (id) automated.set(id, row);
       else automated.set(`__untitled_${automated.size}`, row);
     }
