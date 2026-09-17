@@ -95,9 +95,40 @@ function loadManual() {
   }
 }
 
+/** Automated rows from an existing workbook, keyed by case ID (manual rows are re-imported from the sheet instead). */
+async function loadPrevious(file) {
+  const wb = new ExcelJS.Workbook();
+  await wb.xlsx.readFile(file);
+  const ws = wb.getWorksheet('Test Cases');
+  const out = new Map();
+  if (!ws) return out;
+  const cellText = (v) => (v === null || v === undefined) ? '' : (v.richText ? v.richText.map((r) => r.text).join('') : (typeof v === 'object' && v.result !== undefined ? String(v.result) : String(v)));
+  const header = ws.getRow(5).values.slice(1).map(cellText);
+  const col = (name) => header.indexOf(name) + 1;
+  const manualIds = new Set(loadManual().map((m) => m.id));
+  for (let r = 6; r <= ws.rowCount; r++) {
+    const row = ws.getRow(r);
+    const id = cellText(row.getCell(col('Testcase ID')).value);
+    if (!id) continue;
+    const status = cellText(row.getCell(col('Status')).value);
+    // Rows that never ran are the template's placeholders, not results worth keeping.
+    if (status === 'Not Executed') continue;
+    // Manual sheet rows that no automated test has claimed stay manual.
+    const actual = cellText(row.getCell(col('Actual Result')).value);
+    if (manualIds.has(id) && !/As expected\.|Error|expect\(|Timeout|Not run\./.test(actual)) continue;
+    out.set(id, {
+      id, module: cellText(row.getCell(col('Module')).value), scenario: cellText(row.getCell(col('Test Scenario')).value),
+      preconditions: cellText(row.getCell(col('Preconditions')).value), steps: cellText(row.getCell(col('Test steps')).value),
+      data: cellText(row.getCell(col('Test Data')).value), expected: cellText(row.getCell(col('Expected Result')).value),
+      actual, status, automated: true,
+    });
+  }
+  return out;
+}
+
 class ExcelReporter {
   constructor(options = {}) {
-    this.out = options.outputFile ? path.resolve(options.outputFile) : OUT;
+    this.out = process.env.EXCEL_OUT ? path.resolve(process.env.EXCEL_OUT) : (options.outputFile ? path.resolve(options.outputFile) : OUT);
     this.results = new Map();
     this.allTests = [];
     this.executed = false;
@@ -136,6 +167,23 @@ class ExcelReporter {
       }
       if (id) automated.set(id, row);
       else automated.set(`__untitled_${automated.size}`, row);
+    }
+
+    // 1b. A partial run (`--last-failed`, a single spec, a --grep) only carries
+    //     the tests it ran. Keep the previous workbook's result for every
+    //     automated case that is not part of this run, so rerunning the failures
+    //     refreshes their rows without blanking the other 100+ cases.
+    if (this.executed && fs.existsSync(this.out)) {
+      try {
+        const previous = await loadPrevious(this.out);
+        let kept = 0;
+        for (const [id, row] of previous) {
+          if (!automated.has(id)) { automated.set(id, row); kept++; }
+        }
+        if (kept) console.log(`  Kept ${kept} automated result(s) from the previous workbook (not part of this run).`);
+      } catch (err) {
+        console.warn(`  Could not read the previous workbook (${err.message}) - starting from this run only.`);
+      }
     }
 
     // 2. Sheet order first; an automated case with the same ID replaces the

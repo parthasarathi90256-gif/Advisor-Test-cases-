@@ -73,7 +73,7 @@ test.describe('Login (no saved session)', () => {
     expected: 'An "Account not found" message is shown and the user stays on /login.',
   }), async ({ page }) => {
     await requestOtp(page, 'zzzzz-not-registered-9999@example.com');
-    await expect(page.getByText(/Account not found|No account exists/i)).toBeVisible({ timeout: 15000 });
+    await expect(page.getByText(/Account not found|No account exists/i).first()).toBeVisible({ timeout: 15000 });
     await expect(page).toHaveURL(/\/login/);
   });
 
@@ -165,7 +165,9 @@ test.describe('Shell (saved session)', () => {
       ['Members', /\/wellness\/members/, 'Members'], ['Sessions', /\/wellness\/sessions/, 'Sessions'],
       ['Care Scheduler', /\/wellness\/care-scheduler/, 'Care Scheduler'], ['Navigation Matrix', /\/wellness\/navigation-matrix/, 'Navigation Matrix'],
       ['Communication Center', /\/wellness\/messages/, 'Communication Center'], ['Help & Support', /\/wellness\/support/, 'Help & Support'],
-      ['Reports', /\/wellness\/reports/, 'Reports & Analytics'], ['Admin', /\/wellness\/admin/, 'Administration'], ['Dashboard', /\/wellness\/dashboard/, 'Dashboard'],
+      ['Reports', /\/wellness\/reports/, 'Reports & Analytics'], ['Dashboard', /\/wellness\/dashboard/, 'Dashboard'],
+      // Admin last: inside the admin area the sidebar is replaced by the admin navigation.
+      ['Admin', /\/wellness\/admin/, 'Administration'],
     ];
     for (const [label, url, heading] of items) {
       await page.getByRole('navigation').getByRole('button', { name: label, exact: true }).click();

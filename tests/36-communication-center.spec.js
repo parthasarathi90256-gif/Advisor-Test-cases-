@@ -11,7 +11,7 @@ const MEMBER = process.env.TEST_MESSAGE_MEMBER || 'Bruce Banner';
 test.describe('Communication Center', () => {
   test.beforeEach(async ({ page }) => {
     await gotoSettled(page, '/wellness/messages', 4000);
-    await hydrated(page, page.locator('main'), 200);
+    await expect(page.getByRole('button', { name: /No messages yet|No email sent|No SMS sent/ }).first()).toBeVisible({ timeout: 90000 });
   });
 
   test(...caseOf({

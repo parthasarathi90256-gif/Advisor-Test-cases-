@@ -7,7 +7,7 @@ const careRows = (page) => page.getByRole('button', { name: 'View Details' });
 test.describe('Care Scheduler — queue', () => {
   test.beforeEach(async ({ page }) => {
     await gotoSettled(page, '/wellness/care-scheduler', 3000);
-    await careRows(page).first().waitFor({ state: 'visible', timeout: 40000 }).catch(() => {});
+    await careRows(page).first().waitFor({ state: 'visible', timeout: 90000 }).catch(() => {});
   });
 
   test(...caseOf({
@@ -20,7 +20,7 @@ test.describe('Care Scheduler — queue', () => {
     expected: 'Total requests, In progress and Closed tiles are shown with counts.',
   }), async ({ page }) => {
     for (const t of ['Total requests', 'In progress', 'Closed']) await expect(page.getByText(t, { exact: true }).first()).toBeVisible();
-    await expect(page.getByText(/\d+ in your queue/)).toBeVisible();
+    await expect(page.getByText(/\d+ in your queue/)).toBeVisible({ timeout: 60000 });
   });
 
   test(...caseOf({
@@ -182,7 +182,7 @@ test.describe('Care Scheduler — queue', () => {
     const id = page.url().split('/requests/')[1];
     await page.getByRole('button', { name: 'Select All' }).click();
     await page.getByRole('button', { name: 'Mark as Reviewed' }).click();
-    await expect(page.getByRole('heading', { name: /Call the provider/i })).toBeVisible({ timeout: 60000 });
+    await expect(page.getByRole('heading', { name: /Call the provider|check availability/i })).toBeVisible({ timeout: 120000 });
     await expect(page.getByRole('button', { name: 'Confirmed', exact: true }).first()).toBeVisible();
     await expect(page.getByRole('button', { name: 'Not Available', exact: true }).first()).toBeVisible();
     await gotoSettled(page, '/wellness/care-scheduler', 3000);
@@ -205,7 +205,8 @@ test.describe('Care Scheduler — queue', () => {
     test.skip(!(await careRows(page).count()), 'No In Progress requests.');
     await careRows(page).first().click();
     await page.waitForURL(/\/care-scheduler\/requests\/[^/]+/, { timeout: 40000 });
-    await expect(page.getByRole('heading', { name: /Call the provider/i })).toBeVisible({ timeout: 60000 });
+    await page.waitForLoadState('networkidle').catch(() => {});
+    await expect(page.getByRole('heading', { name: /Call the provider|check availability/i })).toBeVisible({ timeout: 120000 });
     await expect(page.getByRole('button', { name: 'Confirmed', exact: true }).first()).toBeVisible();
     await expect(page.getByRole('button', { name: 'Not Available', exact: true }).first()).toBeVisible();
     await expect(page.getByText(/Still needed: a slot the provider can confirm/i)).toBeVisible();

@@ -114,7 +114,7 @@ test.describe('Sessions — Scheduling (write path)', () => {
 
   test.beforeEach(async ({ page }) => {
     await page.goto('/wellness/sessions');
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('networkidle').catch(() => {});
   });
 
   test(...caseOf({

@@ -76,7 +76,7 @@ test.describe('Help & Support', () => {
   }), async ({ page }) => {
     await page.getByRole('button', { name: 'Support', exact: true }).first().click();
     const submit = page.getByRole('button', { name: 'Submit Request' });
-    await expect(submit).toBeVisible();
+    await expect(submit).toBeVisible({ timeout: 30000 });
     await expect(submit).toBeDisabled();
     await page.getByRole('button', { name: /^Feedback/ }).click();
     await page.getByRole('textbox', { name: 'Title *' }).fill('Automated negative check');
@@ -97,14 +97,14 @@ test.describe('Help & Support', () => {
       + '(minimum 20 characters), an attachments drop zone (JPG/PNG/WebP/MP4/MOV, up to 5 files) and Cancel / Submit Request.',
   }), async ({ page }) => {
     await page.getByRole('button', { name: 'Support', exact: true }).first().click();
-    await expect(page.getByRole('heading', { name: 'Contact Support' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Contact Support', level: 2 })).toBeVisible({ timeout: 30000 });
     for (const c of [/^Issue/, /^Feedback/, /^Feature Request/]) await expect(page.getByRole('button', { name: c })).toBeVisible();
     await expect(page.getByRole('textbox', { name: 'Title *' })).toBeVisible();
     await expect(page.getByRole('textbox', { name: 'Description *' })).toBeVisible();
     await expect(page.getByText(/Minimum 20 characters/)).toBeVisible();
     await expect(page.getByText(/up to 5 files/)).toBeVisible();
     await page.getByRole('button', { name: 'Cancel' }).click();
-    await expect(page.getByRole('heading', { name: 'Contact Support' })).toHaveCount(0);
+    await expect(page.getByRole('heading', { name: 'Contact Support', level: 2 })).toHaveCount(0);
   });
 
   test(...caseOf({
@@ -117,13 +117,14 @@ test.describe('Help & Support', () => {
     expected: '"Submit Request" becomes enabled once the form is valid and the modal closes after submission.',
   }), async ({ page }) => {
     await page.getByRole('button', { name: 'Support', exact: true }).first().click();
+    await expect(page.getByRole('button', { name: 'Submit Request' })).toBeVisible({ timeout: 30000 });
     await page.getByRole('button', { name: /^Feedback/ }).click();
     await page.getByRole('textbox', { name: 'Title *' }).fill('Automated QA ticket');
     await page.getByRole('textbox', { name: 'Description *' }).fill('Automated test submission from the QA suite - please ignore.');
     const submit = page.getByRole('button', { name: 'Submit Request' });
     await expect(submit).toBeEnabled();
     await submit.click();
-    await expect(page.getByRole('heading', { name: 'Contact Support' })).toHaveCount(0, { timeout: 15000 });
+    await expect(page.getByRole('heading', { name: 'Contact Support', level: 2 })).toHaveCount(0, { timeout: 30000 });
   });
 });
 

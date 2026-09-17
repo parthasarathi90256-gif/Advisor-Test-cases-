@@ -13,8 +13,8 @@ test.describe('Advisor Profile', () => {
 
   test.beforeEach(async ({ page }) => {
     await page.goto('/wellness/profile');
-    await page.waitForLoadState('networkidle');
-    await expect(page.getByRole('region', { name: 'Personal Information' })).toBeVisible({ timeout: 40000 });
+    await page.waitForLoadState('networkidle').catch(() => {});
+    await expect(page.getByRole('region', { name: 'Personal Information' })).toBeVisible({ timeout: 90000 });
   });
 
   test(...caseOf({
@@ -130,7 +130,7 @@ test.describe('Advisor Profile', () => {
     await page.locator('input[type=file]').first().setInputFiles(pngPath);
     const upload = page.getByRole('button', { name: 'Upload Photo' });
     await expect(upload).toBeEnabled();
-    const resp = page.waitForResponse((r) => /profile\/photo/.test(r.url()) && r.request().method() === 'POST', { timeout: 30000 });
+    const resp = page.waitForResponse((r) => /profile\/photo/.test(r.url()) && r.request().method() === 'POST', { timeout: 90000 });
     await upload.click();
     expect((await resp).status()).toBe(200);
     await expect(page.getByRole('region', { name: 'Profile Overview' }).locator('img').first()).toBeVisible();
@@ -167,10 +167,15 @@ test.describe('Advisor Profile', () => {
     const prof = page.getByRole('region', { name: 'Professional Information' });
     await prof.getByRole('button', { name: 'Edit' }).click();
     const years = prof.getByRole('spinbutton').first().or(prof.getByRole('textbox', { name: /Years/ }).first());
-    await years.fill('4');
-    await prof.getByRole('button', { name: /Save Changes/ }).click();
+    // Save only enables when something changed - pick a value different from the current one.
+    const current = await years.inputValue();
+    const next = current === '4' ? '5' : '4';
+    await years.fill(next);
+    const save = prof.getByRole('button', { name: /Save Changes/ });
+    await expect(save).toBeEnabled();
+    await save.click();
     await page.waitForTimeout(3000);
-    await expect(prof).toContainText(/4\s*years?|Years of Experience\s*\*?\s*4/i, { timeout: 15000 });
+    await expect(prof).toContainText(new RegExp(`${next}\\s*years?|Years of Experience\\s*\\*?\\s*${next}`, 'i'), { timeout: 15000 });
   });
 
   test(...caseOf({

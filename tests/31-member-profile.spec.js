@@ -181,12 +181,12 @@ test.describe('Member profile', () => {
     const skip = page.getByRole('table', { name: 'Advisory sessions' }).getByRole('button', { name: 'Skip', exact: true }).first();
     test.skip(!(await skip.count()), 'No skippable session for this member.');
     await skip.click();
-    await expect(page.getByText('Skip Session', { exact: true })).toBeVisible();
+    await expect(page.getByText(/A note explaining why is required/i)).toBeVisible({ timeout: 30000 });
     await expect(page.getByRole('button', { name: 'Skip Session' })).toBeDisabled();
     await page.getByPlaceholder(/Why is this session being skipped/i).fill('reason');
     await expect(page.getByRole('button', { name: 'Skip Session' })).toBeEnabled();
     await page.getByRole('button', { name: 'Keep Session' }).click();
-    await expect(page.getByText('Skip Session', { exact: true })).toHaveCount(0);
+    await expect(page.getByText(/A note explaining why is required/i)).toHaveCount(0);
   });
 
   test(...caseOf({

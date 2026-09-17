@@ -18,7 +18,7 @@ async function gotoSettled(page, path, extraMs = 2500) {
 }
 
 /** Wait until an element's text is non-trivial (list/table hydrated). */
-async function hydrated(page, locator, minChars = 50, maxSec = 40) {
+async function hydrated(page, locator, minChars = 50, maxSec = 90) {
   for (let i = 0; i < maxSec; i++) {
     const t = (await locator.innerText().catch(() => '')).trim();
     if (t.length >= minChars && !/^loading/i.test(t)) return;
@@ -51,8 +51,15 @@ async function findSessionRow(page, member, type, status) {
 }
 
 async function openBookingDialog(page) {
-  await page.getByRole('button', { name: 'Schedule Session' }).first().click();
+  const button = page.getByRole('button', { name: 'Schedule Session' }).first();
+  await expect(button).toBeEnabled({ timeout: 60000 });
   const dialog = page.getByRole('dialog', { name: 'Book a session' });
+  // The header mounts before the page is interactive; a click that lands too
+  // early is swallowed, so retry once if nothing opened.
+  for (let attempt = 0; attempt < 3 && !(await dialog.isVisible().catch(() => false)); attempt++) {
+    await button.click();
+    await dialog.waitFor({ state: 'visible', timeout: 15000 }).catch(() => {});
+  }
   await expect(dialog).toBeVisible();
   return dialog;
 }

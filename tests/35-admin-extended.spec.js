@@ -61,8 +61,9 @@ test.describe('Admin → Advisor detail', () => {
     expected: 'The advisor\'s name heading, contact details and section links (Profile, Assigned members, Workload, Lifecycle) are shown.',
   }), async ({ page }) => {
     await expect(page.getByRole('heading').first()).toBeVisible();
-    await expect(page.getByRole('link', { name: 'Profile', exact: true })).toBeVisible();
-    await expect(page.locator('main').getByText(/@/).first()).toBeVisible();
+    for (const l of ['Profile', 'Workload', 'Lifecycle']) await expect(page.getByRole('link', { name: l, exact: true })).toBeVisible({ timeout: 60000 });
+    await expect(page.getByRole('link', { name: /Assigned members/ })).toBeVisible();
+    await expect(page.getByRole('button', { name: /Back to Advisors/i })).toBeVisible();
   });
 
   test(...caseOf({
@@ -77,7 +78,7 @@ test.describe('Admin → Advisor detail', () => {
     await page.getByRole('link', { name: /Assigned members/ }).click();
     await page.waitForLoadState('networkidle').catch(() => {});
     await expect(page.getByRole('button', { name: 'Assign members' })).toBeVisible({ timeout: 40000 });
-    for (const h of ['Member', 'Employer', 'Location']) await expect(page.getByRole('columnheader', { name: h })).toBeVisible();
+    for (const h of ['Member', 'Employer', 'Location']) await expect(page.getByRole('columnheader', { name: h })).toBeVisible({ timeout: 60000 });
     await page.getByRole('button', { name: 'Assign members' }).click();
     await page.waitForURL(/\/assign/, { timeout: 40000 });
     await expect(page.getByText(/Pick members from the unassigned pool/i)).toBeVisible({ timeout: 40000 });
@@ -376,6 +377,7 @@ test.describe('Admin → other areas', () => {
   }), async ({ page }) => {
     await gotoSettled(page, '/wellness/admin/overview', 3000);
     const nav = page.getByRole('navigation', { name: 'Administration' });
+    await expect(nav.getByRole('link', { name: 'Advisors', exact: true })).toBeVisible({ timeout: 90000 });
     for (const [label, url] of [['Advisors', /\/admin\/advisors/], ['Members', /\/admin\/members/], ['Follow-ups', /\/admin\/follow-ups/], ['Departures', /\/admin\/departures/], ['Assessment Audit Log', /\/admin\/assessment-audit/], ['Notifications', /\/admin\/notifications/], ['Overview', /\/admin\/overview/]]) {
       await nav.getByRole('link', { name: label, exact: true }).click();
       await expect(page).toHaveURL(url, { timeout: 40000 });

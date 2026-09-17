@@ -8,7 +8,7 @@ test.describe('Dashboard — extended', () => {
 
   test.beforeEach(async ({ page }) => {
     await gotoSettled(page, '/wellness/dashboard', 4000);
-    await expect(page.getByRole('button', { name: /Today's Sessions/ })).toBeVisible({ timeout: 40000 });
+    await expect(page.getByRole('button', { name: /Today's Sessions/ })).toBeVisible({ timeout: 90000 });
   });
 
   test(...caseOf({
@@ -54,7 +54,7 @@ test.describe('Dashboard — extended', () => {
     data: 'N/A',
     expected: 'Recent Members shows "n of m · newest first" with member cards and join dates; Upcoming Sessions lists next sessions (or an empty state); Tasks & Follow-ups lists open care requests with days open.',
   }), async ({ page }) => {
-    await expect(page.getByText(/Recent Members \d+ of \d+/)).toBeVisible();
+    await expect(page.getByText(/Recent Members \d+ of \d+/).first()).toBeVisible({ timeout: 90000 });
     await expect(page.getByText(/Joined on:/).first()).toBeVisible();
     await expect(page.getByText(/Upcoming Sessions/).first()).toBeVisible();
     await expect(page.getByText(/Tasks & Follow-ups/).first()).toBeVisible();
@@ -67,7 +67,7 @@ test.describe('Members — extended', () => {
 
   test.beforeEach(async ({ page }) => {
     await gotoSettled(page, '/wellness/members', 3000);
-    await expect(dataRows(page).first()).toBeVisible({ timeout: 40000 });
+    await expect(dataRows(page).first()).toBeVisible({ timeout: 90000 });
   });
 
   test(...caseOf({

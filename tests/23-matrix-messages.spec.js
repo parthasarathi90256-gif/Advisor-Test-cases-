@@ -194,7 +194,8 @@ test.describe('Navigation Matrix — extended', () => {
     const group = page.getByRole('group', { name: 'Matrix view' });
     await group.getByRole('button', { name: 'List', exact: true }).click();
     await page.waitForTimeout(3000);
-    await expect(page.getByRole('table').first()).toBeVisible();
+    await expect(group.getByRole('button', { name: 'List', exact: true })).toHaveAttribute('aria-pressed', 'true');
+    await expect(page.locator('main').getByText('Depression').first()).toBeVisible();
     await group.getByRole('button', { name: 'Grid', exact: true }).click();
     await page.waitForTimeout(3000);
     await expect(cards(page).first()).toBeVisible();
