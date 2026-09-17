@@ -14,7 +14,8 @@
     "trace": "playwright show-trace",
     "excel": "playwright test",
     "excel:template": "playwright test --list --reporter=./reporters/excel-reporter.js",
-    "import": "node scripts/import-sheet.js"
+    "import": "node scripts/import-sheet.js",
+    "pdf": "node scripts/export-pdf.js"
   },
   "devDependencies": {
     "@playwright/test": "^1.50.0"
